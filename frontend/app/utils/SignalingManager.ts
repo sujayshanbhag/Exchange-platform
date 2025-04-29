@@ -44,7 +44,6 @@ export class SignalingManager {
                             price: message.data.p,
                             symbol: message.data.s,
                         }
-                        console.log(newTicker);
                         callback(newTicker);
                    }
                    if (type === "depth") {

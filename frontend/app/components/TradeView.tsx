@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { ChartManager } from "../utils/ChartManager";
 import { getKlines } from "../utils/httpClient";
-import { KLine } from "../utils/types";
+import { KLine, Ticker } from "../utils/types";
+import { SignalingManager } from "../utils/SignalingManager";
 
 export function TradeView({
   market,
@@ -13,9 +14,10 @@ export function TradeView({
 
   useEffect(() => {
     const init = async () => {
+      console.log("init chart", market);
       let klineData: KLine[] = [];
       try {
-        klineData = await getKlines(market, "1h", Math.floor((new Date().getTime() - 1000 * 60 * 60 * 24 * 7) / 1000), Math.floor(new Date().getTime() / 1000)); 
+        klineData = await getKlines(market, "1h", Math.floor((new Date().getTime() - 1000 * 60 * 60 * 24 * 7) / 1000), Math.floor(new Date().getTime() / 1000));
       } catch (e) { }
 
       if (chartRef) {
@@ -30,7 +32,7 @@ export function TradeView({
               high: parseFloat(x.high),
               low: parseFloat(x.low),
               open: parseFloat(x.open),
-              timestamp: new Date(x.end), 
+              timestamp: new Date(x.end),
             })),
           ].sort((x, y) => (x.timestamp < y.timestamp ? -1 : 1)) || [],
           {
@@ -42,7 +44,11 @@ export function TradeView({
         chartManagerRef.current = chartManager;
       }
     };
+    SignalingManager.getInstance().registerCallback("ticker", (data: Ticker) => { init() }, `TICKER-${market}`);
     init();
+    return () => {
+      SignalingManager.getInstance().deRegisterCallback("ticker", `TICKER-${market}`);
+    }
   }, [market, chartRef]);
 
   return (
