@@ -1,85 +1,83 @@
 import axios from "axios";
 
 const BASE_URL = "http://localhost:3000";
-const TOTAL_BIDS = 15;
-const TOTAL_ASK = 15;
 const MARKET = "TATA_INR";
-const USER_ID : string= "5";
+
+function getRandomNumber(min: number, max: number): number {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
 async function main() {
-    const price = 1000;
-    const openOrders = await axios.get(`${BASE_URL}/api/v1/order/open?userId=${USER_ID}&market=${MARKET}`);
+    const openOrders = await axios.get(`${BASE_URL}/api/v1/order/open?market=${MARKET}`);
+    console.log("Open Orders:", openOrders.data);
 
-    const totalBids = openOrders.data.filter((o: any) => o.side === "buy").length;
-    const totalAsks = openOrders.data.filter((o: any) => o.side === "sell").length;
+    if (openOrders.data.length > 0) {
+        const buyOrders = openOrders.data.filter((o: any) => o.side === "buy");
+        const sellOrders = openOrders.data.filter((o: any) => o.side === "sell");
 
-    const cancelledBids = await cancelBidsMoreThan(openOrders.data, price);
-    const cancelledAsks = await cancelAsksLessThan(openOrders.data, price);
+        // Find the lowest buy price and the lowest sell price
+        const lowestBuy = buyOrders.length > 0 ? Math.min(...buyOrders.map((o: any) => parseFloat(o.price))) : null;
+        const highestSell = sellOrders.length > 0 ? Math.max(...sellOrders.map((o: any) => parseFloat(o.price))) : null;
+        console.log("Lowest Buy Price:", lowestBuy);
+        console.log("Lowest Sell Price:", highestSell);
 
-    let bidsToAdd = TOTAL_BIDS - totalBids - cancelledBids;
-    let asksToAdd = TOTAL_ASK - totalAsks - cancelledAsks;
-
-    while(bidsToAdd > 0 || asksToAdd > 0) {
-        if (bidsToAdd > 0) {
+        if (lowestBuy !== null) {
+            const randomSubtract = getRandomNumber(1, Math.min(lowestBuy, 999));
             await axios.post(`${BASE_URL}/api/v1/order`, {
                 market: MARKET,
-                price: (price - Math.random() * 1000).toFixed(1).toString(),
-                quantity: "1",
-                side: "buy",
-                userId: USER_ID
-            });
-            bidsToAdd--;
-        }
-        if (asksToAdd > 0) {
-            await axios.post(`${BASE_URL}/api/v1/order`, {
-                market: MARKET,
-                price: (price + Math.random() * 1000).toFixed(1).toString(),
-                quantity: "1",
+                price: (lowestBuy - randomSubtract).toString(),
+                quantity: getRandomNumber(1, 10).toString(),
                 side: "sell",
-                userId: USER_ID
+                userId: getRandomNumber(1, 10).toString(),
             });
-            asksToAdd--;
+            console.log(`Created sell order at price: ${(lowestBuy - randomSubtract).toFixed(1)}`);
+        }
+        if (highestSell !== null) {
+            const randomAdd = getRandomNumber(1, 999);
+            await axios.post(`${BASE_URL}/api/v1/order`, {
+                market: MARKET,
+                price: (highestSell + randomAdd).toString(),
+                quantity: getRandomNumber(1, 10).toString(),
+                side: "buy",
+                userId: getRandomNumber(1, 10).toString(),
+            });
+            console.log(`Created buy order at price: ${(highestSell + randomAdd).toFixed(1)}`);
+        }
+    } else {
+        console.log("No open orders found. Creating 5 buy and 5 sell orders...");
+
+        // Create 5 buy orders
+        for (let i = 0; i < 5; i++) {
+            const randomPrice = getRandomNumber(2000, 5000);
+            const randomQuantity = getRandomNumber(1, 10);
+            await axios.post(`${BASE_URL}/api/v1/order`, {
+                market: MARKET,
+                price: randomPrice.toFixed(1).toString(),
+                quantity: randomQuantity.toString(),
+                side: "buy",
+                userId: getRandomNumber(1, 10).toString(),
+            });
+            console.log(`Created buy order at price: ${randomPrice}, quantity: ${randomQuantity}`);
+        }
+
+        // Create 5 sell orders
+        for (let i = 0; i < 5; i++) {
+            const randomPrice = getRandomNumber(2000, 5000);
+            const randomQuantity = getRandomNumber(1, 10);
+            await axios.post(`${BASE_URL}/api/v1/order`, {
+                market: MARKET,
+                price: randomPrice.toFixed(1).toString(),
+                quantity: randomQuantity.toString(),
+                side: "sell",
+                userId: getRandomNumber(1, 10).toString(),
+            });
+            console.log(`Created sell order at price: ${randomPrice}, quantity: ${randomQuantity}`);
         }
     }
 
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     main();
-}
-
-async function cancelBidsMoreThan(openOrders: any[], price: number) {
-    let promises: any[] = [];
-    openOrders.map(o => {
-        if (o.side === "buy" && (o.price > price || Math.random() < 0.1)) {
-            promises.push(axios.delete(`${BASE_URL}/api/v1/order`, {
-                data: {
-                    orderId: o.orderId,
-                    market: MARKET,
-                    userId: USER_ID
-                }
-            }));
-        }
-    });
-    await Promise.all(promises);
-    return promises.length;
-}
-
-async function cancelAsksLessThan(openOrders: any[], price: number) {
-    let promises: any[] = [];
-    openOrders.map(o => {
-        if (o.side === "sell" && (o.price < price || Math.random() < 0.5)) {
-            promises.push(axios.delete(`${BASE_URL}/api/v1/order`, {
-                data: {
-                    orderId: o.orderId,
-                    market: MARKET,
-                    userId: USER_ID
-                }
-            }));
-        }
-    });
-
-    await Promise.all(promises);
-    return promises.length;
 }
 
 main();

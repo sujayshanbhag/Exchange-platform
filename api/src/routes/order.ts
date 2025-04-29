@@ -30,7 +30,8 @@ const cancelOrderSchema = z.object({
 const openOrdersQuerySchema = z.object({
     userId: z.string()
         .regex(/^\d+$/, "UserId must be a numeric string")
-        .min(1, "UserId cannot be empty"),
+        .min(1, "UserId cannot be empty")
+        .optional(),
     market: z.string().min(1, "Market cannot be empty")
 });
 

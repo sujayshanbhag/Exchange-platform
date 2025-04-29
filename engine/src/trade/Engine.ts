@@ -132,7 +132,7 @@ export class Engine {
                     if (!openOrderbook) {
                         throw new Error("No orderbook found");
                     }
-                    const openOrders = openOrderbook.getOpenOrders(message.data.userId);
+                    const openOrders = openOrderbook.getOpenOrders(message.data.userId ?? undefined);
 
                     RedisManager.getInstance().sendToApi(clientId, {
                         type: "OPEN_ORDERS",
@@ -360,7 +360,7 @@ export class Engine {
                 depth?.asks.find(x => x[0] === f.price) || [f.price, "0"]
             );
             const updatedBid = depth?.bids.find(x => Number(x[0]) === Number(price));
-            console.log(updatedBid);
+            //console.log(updatedBid);
             RedisManager.getInstance().publishMessage(`depth@${market}`, {
                 stream: `depth@${market}`,
                 data: {
@@ -451,7 +451,7 @@ export class Engine {
 
     onRamp(userId: string, amount: number) {
         const userBalance = this.balances.get(userId);
-        console.log(userId);
+        //console.log(userId);
         if (!userBalance) {
             this.balances.set(userId, {
                 [BASE_CURRENCY]: {

@@ -37,7 +37,7 @@ export type MessageToEngine = {
 } | {
     type: typeof GET_OPEN_ORDERS,
     data: {
-        userId: string,
+        userId?: string,
         market: string,
     }
 } | {
