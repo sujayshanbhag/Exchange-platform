@@ -55,6 +55,7 @@ export class Orderbook {
         if (order.side === "buy") {
             const {executedQty, fills} = this.matchBid(order); 
             order.filled = executedQty;
+            this.calculateCurrentPrice();
             if (executedQty === order.quantity) {
                 return {
                     executedQty,
@@ -63,7 +64,6 @@ export class Orderbook {
             }
             this.bids.push(order);
             this.bids.sort((a, b) => b.price - a.price);
-            this.calculateCurrentPrice();
             return {
                 executedQty,
                 fills
@@ -71,6 +71,7 @@ export class Orderbook {
         } else {
             const {executedQty, fills} = this.matchAsk(order);
             order.filled = executedQty;
+            this.calculateCurrentPrice();
             if (executedQty === order.quantity) {
                 return {
                     executedQty,
@@ -79,7 +80,6 @@ export class Orderbook {
             }
             this.asks.push(order);
             this.asks.sort((a, b) => a.price - b.price);
-            this.calculateCurrentPrice();
             return {
                 executedQty,
                 fills
@@ -90,7 +90,19 @@ export class Orderbook {
     calculateCurrentPrice() {
         const bestBid = this.bids.length > 0 ? this.bids[0] : { price: 0, quantity: 0 };
         const bestAsk = this.asks.length > 0 ? this.asks[this.asks.length - 1] : { price: 0, quantity: 0 };
-        this.currentPrice= ((bestBid.price* bestBid.quantity) + (bestAsk.price * bestAsk.quantity)) / (bestBid.quantity + bestAsk.quantity);
+    
+        if (bestBid.price === 0 && bestAsk.price === 0) {
+            // Do not update currentPrice if both are 0
+            return;
+        }
+    
+        if (bestBid.price === 0) {
+            this.currentPrice = bestAsk.price;
+        } else if (bestAsk.price === 0) {
+            this.currentPrice = bestBid.price;
+        } else {
+            this.currentPrice = ((bestBid.price * bestBid.quantity) + (bestAsk.price * bestAsk.quantity)) / (bestBid.quantity + bestAsk.quantity);
+        }
     }
 
     matchBid(order: Order): {fills: Fill[], executedQty: number} {
@@ -192,10 +204,14 @@ export class Orderbook {
         };
     }
 
-    getOpenOrders(userId: string): Order[] {
+    getOpenOrders(userId?: string): Order[] {
+        if(userId!== undefined) {
         const asks = this.asks.filter(x => x.userId === userId);
         const bids = this.bids.filter(x => x.userId === userId);
         return [...asks, ...bids];
+        } else {
+            return [...this.asks, ...this.bids];
+        }
     }
 
     cancelBid(order: Order) {
